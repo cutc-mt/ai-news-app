@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface NewsItem {
   id: number;
@@ -12,73 +12,49 @@ interface NewsItem {
   url: string;
 }
 
-// Phase 1: モックデータ（Phase 2でBackend APIに置き換え）
-const MOCK_NEWS: NewsItem[] = [
-  {
-    id: 1,
-    title: "GPT-6 Astraが数学の未解決問題10個を解決",
-    summary: "OpenAIの次世代モデルAstraが、長年の数学難問を次々と解決。AGIへの道と言われる。",
-    source: "World of AI",
-    date: "2026-08-03",
-    category: "AI Model",
-    url: "https://www.youtube.com/watch?v=KbYio-N8_LU",
-  },
-  {
-    id: 2,
-    title: "MiniMax H3がオープンウエイトで公開",
-    summary: "最大15秒・2Kの音声付き動画を生成できるマルチモーダルモデル。Seedanceより低価格。",
-    source: "まさおAI",
-    date: "2026-08-03",
-    category: "Video AI",
-    url: "https://www.youtube.com/watch?v=echFvKbKWsk",
-  },
-  {
-    id: 3,
-    title: "Gemini Sparkが日本上陸",
-    summary: "160カ国以上に拡大。PCを閉じてもクラウド基盤で動き続けるAIエージェント。",
-    source: "ずんめたラボ",
-    date: "2026-08-03",
-    category: "AI Agent",
-    url: "https://www.youtube.com/watch?v=tpolizAdxg4",
-  },
-  {
-    id: 4,
-    title: "DeepSeek V4 Flash GA リリース",
-    summary: "TerminalBench 82.7、GLM 5.2を全ベンチマークで撃破。MITライセンスで公開。",
-    source: "World of AI",
-    date: "2026-08-02",
-    category: "AI Model",
-    url: "https://www.youtube.com/watch?v=wT42SgaOPK4",
-  },
-  {
-    id: 5,
-    title: "Kimi K3 オープンウェイト化",
-    summary: "ムーンショットAIのK3がFable 5やGPT 5.6に迫る性能。2.8兆パラメータ。",
-    source: "あきらパパ",
-    date: "2026-08-02",
-    category: "AI Model",
-    url: "https://www.youtube.com/watch?v=C-5l4iaHgKQ",
-  },
-  {
-    id: 6,
-    title: "Claude Opus 5が値上げなしで最強クラスに進化",
-    summary: "Fable 5に迫る性能を半額で。プラン変更不要で即利用可能。",
-    source: "2人注目ニュース",
-    date: "2026-08-02",
-    category: "AI Model",
-    url: "https://www.youtube.com/watch?v=PzH8ie0dcOU",
-  },
-];
-
-const CATEGORIES = ["すべて", "AI Model", "AI Agent", "Video AI"];
+// APIのベースURL（ローカル開発時と本番で切り替え）
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function Home() {
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [categories, setCategories] = useState<string[]>(["すべて"]);
   const [selectedCategory, setSelectedCategory] = useState("すべて");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredNews =
-    selectedCategory === "すべて"
-      ? MOCK_NEWS
-      : MOCK_NEWS.filter((n) => n.category === selectedCategory);
+  // カテゴリ一覧を取得
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/categories`)
+      .then((res) => res.json())
+      .then((data) => setCategories(data))
+      .catch(() => {
+        // APIが動いてない時はデフォルトのまま
+      });
+  }, []);
+
+  // ニュース一覧を取得
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    const params =
+      selectedCategory !== "すべて"
+        ? `?category=${encodeURIComponent(selectedCategory)}`
+        : "";
+    fetch(`${API_BASE_URL}/api/news${params}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("API Error");
+        return res.json();
+      })
+      .then((data) => {
+        setNews(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError("ニュースの取得に失敗しました。APIサーバーが起動しているか確認してください。");
+        setLoading(false);
+      });
+  }, [selectedCategory]);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -89,7 +65,7 @@ export default function Home() {
             🤖 AI News Aggregator
           </h1>
           <p className="mt-2 text-indigo-100 text-lg">
-            最新のAIニュースを一箇所に - Phase 1 (Static)
+            最新のAIニュースを一箇所に - Phase 2 (Frontend + Backend)
           </p>
         </div>
       </header>
@@ -97,7 +73,7 @@ export default function Home() {
       {/* カテゴリーフィルター */}
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="flex gap-2 flex-wrap">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -113,58 +89,76 @@ export default function Home() {
         </div>
       </div>
 
+      {/* エラー表示 */}
+      {error && (
+        <div className="max-w-5xl mx-auto px-4 pb-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            ⚠️ {error}
+          </div>
+        </div>
+      )}
+
+      {/* ローディング */}
+      {loading && (
+        <div className="max-w-5xl mx-auto px-4 pb-16 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <p className="mt-2 text-slate-400 text-sm">読み込み中...</p>
+        </div>
+      )}
+
       {/* ニュース一覧 */}
-      <div className="max-w-5xl mx-auto px-4 pb-16">
-        <div className="grid gap-4">
-          {filteredNews.map((news) => (
-            <article
-              key={news.id}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0">
-                  <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                    {news.category}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-semibold text-slate-800 leading-snug">
-                    {news.title}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500 line-clamp-2">
-                    {news.summary}
-                  </p>
-                  <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
-                    <span className="font-medium text-slate-500">
-                      📺 {news.source}
+      {!loading && (
+        <div className="max-w-5xl mx-auto px-4 pb-16">
+          <div className="grid gap-4">
+            {news.map((item) => (
+              <article
+                key={item.id}
+                className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      {item.category}
                     </span>
-                    <span>📅 {news.date}</span>
-                    <a
-                      href={news.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-500 hover:text-indigo-600 font-medium"
-                    >
-                      元記事を見る →
-                    </a>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg font-semibold text-slate-800 leading-snug">
+                      {item.title}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">
+                      {item.summary}
+                    </p>
+                    <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
+                      <span className="font-medium text-slate-500">
+                        📺 {item.source}
+                      </span>
+                      <span>📅 {item.date}</span>
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-500 hover:text-indigo-600 font-medium"
+                      >
+                        元記事を見る →
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {/* Phase表示 */}
-        <div className="mt-12 text-center">
-          <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 text-sm font-medium px-4 py-2 rounded-full border border-amber-200">
-            🔧 Phase 1: Static Frontend
+              </article>
+            ))}
           </div>
-          <p className="mt-3 text-xs text-slate-400">
-            Phase 2: Backend API（Cloud Run） / Phase 3: DB（TiDB） / Phase 4:
-            Redis（Upstash）
-          </p>
+
+          {/* Phase表示 */}
+          <div className="mt-12 text-center">
+            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-sm font-medium px-4 py-2 rounded-full border border-green-200">
+              ✅ Phase 2: Frontend + Backend API
+            </div>
+            <p className="mt-3 text-xs text-slate-400">
+              API: {API_BASE_URL} / Phase 3: DB（TiDB） / Phase 4: Redis（Upstash）
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }
