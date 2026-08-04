@@ -1,27 +1,27 @@
 """
-AI News Aggregator - Backend API (Phase 2)
+AI News Aggregator - Backend API (Phase 3)
 
-Phase 2: モックデータを返すAPI
-Phase 3以降: TiDB Cloud + Upstash Redis連携
+Phase 3: TiDB Cloud からデータを取得
 """
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from typing import Optional
-from datetime import date
+from database import get_db, NewsItemDB, init_db
 
 app = FastAPI(
     title="AI News Aggregator API",
     description="AIニュースを集約するAPIサーバー",
-    version="0.1.0",
+    version="0.3.0",
 )
 
-# CORS設定（Cloudflare Pagesからのアクセスを許可）
+# CORS設定
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://***REDACTED***",  # 本番Frontend
-        "http://localhost:3000",               # ローカル開発用
+        "https://***REDACTED***",
+        "http://localhost:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
 
-# --- データモデル ---
+# --- データモデル（Pydantic）---
 
 class NewsItem(BaseModel):
     id: int
@@ -40,6 +40,9 @@ class NewsItem(BaseModel):
     category: str
     url: str
 
+    class Config:
+        from_attributes = True
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -47,64 +50,25 @@ class HealthResponse(BaseModel):
     version: str
 
 
-# --- モックデータ（Phase 3でTiDBに移行）---
+class NewsCreate(BaseModel):
+    """ニュース新規作成用"""
+    title: str
+    summary: str
+    source: str
+    date: str
+    category: str
+    url: str
 
-MOCK_NEWS: list[NewsItem] = [
-    NewsItem(
-        id=1,
-        title="GPT-6 Astraが数学の未解決問題10個を解決",
-        summary="OpenAIの次世代モデルAstraが、長年の数学難問を次々と解決。AGIへの道と言われる。",
-        source="World of AI",
-        date="2026-08-03",
-        category="AI Model",
-        url="https://www.youtube.com/watch?v=KbYio-N8_LU",
-    ),
-    NewsItem(
-        id=2,
-        title="MiniMax H3がオープンウエイトで公開",
-        summary="最大15秒・2Kの音声付き動画を生成できるマルチモーダルモデル。Seedanceより低価格。",
-        source="まさおAI",
-        date="2026-08-03",
-        category="Video AI",
-        url="https://www.youtube.com/watch?v=echFvKbKWsk",
-    ),
-    NewsItem(
-        id=3,
-        title="Gemini Sparkが日本上陸",
-        summary="160カ国以上に拡大。PCを閉じてもクラウド基盤で動き続けるAIエージェント。",
-        source="ずんめたラボ",
-        date="2026-08-03",
-        category="AI Agent",
-        url="https://www.youtube.com/watch?v=tpolizAdxg4",
-    ),
-    NewsItem(
-        id=4,
-        title="DeepSeek V4 Flash GA リリース",
-        summary="TerminalBench 82.7、GLM 5.2を全ベンチマークで撃破。MITライセンスで公開。",
-        source="World of AI",
-        date="2026-08-02",
-        category="AI Model",
-        url="https://www.youtube.com/watch?v=wT42SgaOPK4",
-    ),
-    NewsItem(
-        id=5,
-        title="Kimi K3 オープンウェイト化",
-        summary="ムーンショットAIのK3がFable 5やGPT 5.6に迫る性能。2.8兆パラメータ。",
-        source="あきらパパ",
-        date="2026-08-02",
-        category="AI Model",
-        url="https://www.youtube.com/watch?v=C-5l4iaHgKQ",
-    ),
-    NewsItem(
-        id=6,
-        title="Claude Opus 5が値上げなしで最強クラスに進化",
-        summary="Fable 5に迫る性能を半額で。プラン変更不要で即利用可能。",
-        source="2人注目ニュース",
-        date="2026-08-02",
-        category="AI Model",
-        url="https://www.youtube.com/watch?v=PzH8ie0dcOU",
-    ),
-]
+
+# --- 起動時にDBを初期化 ---
+
+@app.on_event("startup")
+async def startup_event():
+    """サーバー起動時にDBテーブルと初期データを投入"""
+    try:
+        init_db()
+    except Exception as e:
+        print(f"⚠️ DB初期化エラー: {e}")
 
 
 # --- APIエンドポイント ---
@@ -115,29 +79,44 @@ async def health_check():
     return HealthResponse(
         status="ok",
         service="ai-news-api",
-        version="0.1.0",
+        version="0.3.0",
     )
 
 
 @app.get("/api/news", response_model=list[NewsItem])
-async def get_news(category: Optional[str] = None):
+async def get_news(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     """ニュース一覧を取得（カテゴリフィルタ付き）"""
+    query = db.query(NewsItemDB)
     if category and category != "すべて":
-        return [n for n in MOCK_NEWS if n.category == category]
-    return MOCK_NEWS
+        query = query.filter(NewsItemDB.category == category)
+    return query.order_by(NewsItemDB.date.desc(), NewsItemDB.id.desc()).all()
 
 
 @app.get("/api/news/{news_id}", response_model=NewsItem)
-async def get_news_by_id(news_id: int):
+async def get_news_by_id(news_id: int, db: Session = Depends(get_db)):
     """個別ニュースを取得"""
-    for item in MOCK_NEWS:
-        if item.id == news_id:
-            return item
-    raise HTTPException(status_code=404, detail="News not found")
+    item = db.query(NewsItemDB).filter(NewsItemDB.id == news_id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail="News not found")
+    return item
+
+
+@app.post("/api/news", response_model=NewsItem)
+async def create_news(news: NewsCreate, db: Session = Depends(get_db)):
+    """ニュースを新規作成"""
+    db_news = NewsItemDB(**news.model_dump())
+    db.add(db_news)
+    db.commit()
+    db.refresh(db_news)
+    return db_news
 
 
 @app.get("/api/categories")
-async def get_categories():
+async def get_categories(db: Session = Depends(get_db)):
     """カテゴリ一覧を取得"""
-    categories = list(set(n.category for n in MOCK_NEWS))
-    return ["すべて"] + sorted(categories)
+    categories = db.query(NewsItemDB.category).distinct().all()
+    cat_list = [c[0] for c in categories]
+    return ["すべて"] + sorted(cat_list)
