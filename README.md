@@ -45,5 +45,4 @@ uvicorn main:app --reload --port 8000
 
 ## URLs
 
-- **Frontend**: https://***REDACTED***/
-- **Backend API** (Phase 2): coming soon...
+> ⚠️ デプロイURL等の機密情報は `DEPLOYMENT.md`（ローカルのみ）を参照してください。
