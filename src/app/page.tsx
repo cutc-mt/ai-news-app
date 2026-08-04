@@ -249,8 +249,18 @@ export default function Home() {
                         rel="noopener noreferrer"
                         className="text-indigo-500 hover:text-indigo-600 font-medium"
                       >
-                        元記事を見る →
+                        元動画を見る →
                       </a>
+                      {item.infographic_url && (
+                        <a
+                          href={item.infographic_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-500 hover:text-purple-600 font-medium"
+                        >
+                          📊 インフォグラフィックを見る →
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
