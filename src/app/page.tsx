@@ -65,7 +65,7 @@ export default function Home() {
             🤖 AI News Aggregator
           </h1>
           <p className="mt-2 text-indigo-100 text-lg">
-            最新のAIニュースを一箇所に - Phase 3 (Frontend + Backend + DB)
+            最新のAIニュースを一箇所に - Phase 4 (Full Stack)
           </p>
         </div>
       </header>
@@ -150,11 +150,11 @@ export default function Home() {
 
           {/* Phase表示 */}
           <div className="mt-12 text-center">
-            <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-sm font-medium px-4 py-2 rounded-full border border-emerald-200">
-              ✅ Phase 3: Frontend + Backend + DB (TiDB Cloud)
+            <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-700 text-sm font-medium px-4 py-2 rounded-full border border-purple-200">
+              ✅ Phase 4: Full Stack (Frontend + Backend + DB + Cache)
             </div>
             <p className="mt-3 text-xs text-slate-400">
-              API: {API_BASE_URL} / DB: TiDB Cloud (MySQL) / Phase 4: Redis（Upstash）
+              API: Cloud Run / DB: TiDB Cloud / Cache: Upstash Redis
             </p>
           </div>
         </div>
