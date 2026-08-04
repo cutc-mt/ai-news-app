@@ -14,7 +14,7 @@ DB_USER = os.environ.get("DB_USER", "***REDACTED***")
 DB_PASS = os.environ.get("DB_PASS", "")
 DB_NAME = os.environ.get("DB_NAME", "test")
 
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?ssl_verify_cert=true"
 
 engine = create_engine(
     DATABASE_URL,
