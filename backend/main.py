@@ -75,10 +75,26 @@ class NewsCreate(BaseModel):
     infographic_url: Optional[str] = ""
 
 
+class NewsUpdate(BaseModel):
+    """ニュース更新用（全フィールドオプション）"""
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    source: Optional[str] = None
+    date: Optional[str] = None
+    category: Optional[str] = None
+    url: Optional[str] = None
+    tags: Optional[str] = None
+    video_id: Optional[str] = None
+    channel_id: Optional[str] = None
+    infographic_url: Optional[str] = None
+
+
 # --- 起動時 ---
 
 @app.on_event("startup")
 async def startup_event():
+    if os.environ.get("SKIP_DB_INIT"):
+        return
     try:
         init_db()
     except Exception as e:
@@ -164,7 +180,29 @@ async def get_news_by_id(news_id: int, db: Session = Depends(get_db)):
 
     result = NewsItem.model_validate(item).model_dump()
     cache_set(cache_key, result)
-    return result
+    return item
+
+
+@app.put("/api/news/{news_id}", response_model=NewsItem)
+async def update_news(news_id: int, update: NewsUpdate, db: Session = Depends(get_db)):
+    """ニュースを更新（インフォグラフィックURL、タイトル等）"""
+    item = db.query(NewsItemDB).filter(NewsItemDB.id == news_id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail="News not found")
+
+    # Noneでないフィールドのみ更新
+    update_data = update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(item, key, value)
+
+    db.commit()
+    db.refresh(item)
+
+    # キャッシュをクリア
+    cache_delete(f"news:id:{news_id}")
+    cache_delete("news:all")
+
+    return item
 
 
 @app.post("/api/news", response_model=NewsItem)
