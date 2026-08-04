@@ -8,9 +8,9 @@ from sqlalchemy.sql import func
 import os
 
 # 接続情報（環境変数から取得）
-DB_HOST = os.environ.get("DB_HOST", "***REDACTED***")
+DB_HOST = os.environ.get("DB_HOST", "")
 DB_PORT = os.environ.get("DB_PORT", "4000")
-DB_USER = os.environ.get("DB_USER", "***REDACTED***")
+DB_USER = os.environ.get("DB_USER", "")
 DB_PASS = os.environ.get("DB_PASS", "")
 DB_NAME = os.environ.get("DB_NAME", "test")
 
