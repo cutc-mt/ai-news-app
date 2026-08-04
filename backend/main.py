@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
+import os
 from database import get_db, NewsItemDB, init_db
 from cache import cache_get, cache_set, cache_delete, cache_health
 
@@ -17,13 +18,12 @@ app = FastAPI(
     version="0.4.0",
 )
 
-# CORS設定
+# CORS設定（環境変数から取得）
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://***REDACTED***",
-        "http://localhost:3000",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
