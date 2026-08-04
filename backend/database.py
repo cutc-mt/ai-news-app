@@ -1,8 +1,8 @@
 """
 データベース設定とモデル定義
-Phase 3: TiDB Cloud Starter (MySQL互換)
+Phase 5b: DBスキーマ拡張（tags, video_id, channel_id, infographic_url追加）
 """
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Index
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.sql import func
 import os
@@ -40,7 +40,7 @@ def get_db():
 # --- モデル ---
 
 class NewsItemDB(Base):
-    """ニュースアイテムのDBモデル"""
+    """ニュースアイテムのDBモデル（Phase 5b拡張）"""
     __tablename__ = "news_items"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -50,7 +50,19 @@ class NewsItemDB(Base):
     date = Column(String(10), nullable=False)
     category = Column(String(50), nullable=False)
     url = Column(String(500), nullable=False)
+    # Phase 5b: 新規カラム
+    tags = Column(String(500), nullable=True, default="")        # カンマ区切りタグ
+    video_id = Column(String(20), nullable=True, unique=True)    # YouTube動画ID（重複チェック用）
+    channel_id = Column(String(50), nullable=True)               # YouTubeチャンネルhandle
+    infographic_url = Column(String(500), nullable=True)         # インフォグラフィックURL
     created_at = Column(DateTime, server_default=func.now())
+
+    # インデックス
+    __table_args__ = (
+        Index("idx_date", "date"),
+        Index("idx_category", "category"),
+        Index("idx_video_id", "video_id"),
+    )
 
 
 def init_db():
@@ -71,6 +83,10 @@ def init_db():
             date="2026-08-03",
             category="AI Model",
             url="https://www.youtube.com/watch?v=KbYio-N8_LU",
+            tags="GPT-6,OpenAI,AGI,数学",
+            video_id="KbYio-N8_LU",
+            channel_id="@WorldofAI",
+            infographic_url="",
         ),
         NewsItemDB(
             title="MiniMax H3がオープンウエイトで公開",
@@ -79,6 +95,10 @@ def init_db():
             date="2026-08-03",
             category="Video AI",
             url="https://www.youtube.com/watch?v=echFvKbKWsk",
+            tags="MiniMax,動画生成,オープンウエイト",
+            video_id="echFvKbKWsk",
+            channel_id="@ai_masaou",
+            infographic_url="",
         ),
         NewsItemDB(
             title="Gemini Sparkが日本上陸",
@@ -87,6 +107,10 @@ def init_db():
             date="2026-08-03",
             category="AI Agent",
             url="https://www.youtube.com/watch?v=tpolizAdxg4",
+            tags="Gemini,Google,AIエージェント",
+            video_id="tpolizAdxg4",
+            channel_id="@zunmeta_lab_ch",
+            infographic_url="",
         ),
         NewsItemDB(
             title="DeepSeek V4 Flash GA リリース",
@@ -95,6 +119,10 @@ def init_db():
             date="2026-08-02",
             category="AI Model",
             url="https://www.youtube.com/watch?v=wT42SgaOPK4",
+            tags="DeepSeek,V4,Flash,オープンウェイト",
+            video_id="wT42SgaOPK4",
+            channel_id="@WorldofAI",
+            infographic_url="",
         ),
         NewsItemDB(
             title="Kimi K3 オープンウェイト化",
@@ -103,6 +131,10 @@ def init_db():
             date="2026-08-02",
             category="AI Model",
             url="https://www.youtube.com/watch?v=C-5l4iaHgKQ",
+            tags="Kimi,Moonshot,K3,オープンウェイト",
+            video_id="C-5l4iaHgKQ",
+            channel_id="@akira_papa_IT",
+            infographic_url="",
         ),
         NewsItemDB(
             title="Claude Opus 5が値上げなしで最強クラスに進化",
@@ -111,6 +143,10 @@ def init_db():
             date="2026-08-02",
             category="AI Model",
             url="https://www.youtube.com/watch?v=PzH8ie0dcOU",
+            tags="Claude,Anthropic,Opus5",
+            video_id="PzH8ie0dcOU",
+            channel_id="",
+            infographic_url="",
         ),
     ]
 
